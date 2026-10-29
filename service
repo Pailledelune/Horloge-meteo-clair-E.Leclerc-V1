@@ -1,0 +1,128 @@
+#!/usr/bin/python2.7
+# -*- coding: utf-8 -*-
+#
+# Service meteo : interroge Open-Meteo toutes les 15 minutes et ecrit
+# meteo.json, lu par node.lua. Compatible Python 2.7 (info-beamer) et 3.
+
+import json
+import os
+import time
+import traceback
+
+import requests
+
+URL = "https://api.open-meteo.com/v1/forecast"
+PERIODE = 15 * 60          # secondes entre deux mises a jour
+PERIODE_ERREUR = 2 * 60    # nouvel essai apres une erreur
+
+# Position par defaut : Sarrebourg
+LATITUDE = 48.7347
+LONGITUDE = 7.0539
+
+# Seuils des alertes automatiques (prevision sur 24 h)
+RAFALES_VENT = 80          # km/h
+RAFALES_TEMPETE = 100      # km/h
+
+
+def lire_config():
+    try:
+        with open("config.json") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def icone(code, jour):
+    """Code meteo WMO -> nom d'icone dessinee par node.lua"""
+    if code == 0:
+        return "soleil" if jour else "lune"
+    if code in (1, 2):
+        return "eclaircies" if jour else "eclaircies_nuit"
+    if code == 3:
+        return "nuageux"
+    if code in (45, 48):
+        return "brouillard"
+    if code in (95, 96, 99):
+        return "orage"
+    if 71 <= code <= 77 or code in (85, 86):
+        return "neige"
+    if 51 <= code <= 67 or 80 <= code <= 82:
+        return "pluie"
+    return "nuageux"
+
+
+def alerte(heures):
+    """Alerte la plus grave prevue dans les 24 prochaines heures, ou None"""
+    codes = heures.get("weather_code") or []
+    temps = heures.get("temperature_2m") or []
+    pluie = heures.get("precipitation") or []
+    rafales = [r for r in (heures.get("wind_gusts_10m") or []) if r is not None]
+
+    verglas = False
+    for i, code in enumerate(codes):
+        if code in (56, 57, 66, 67):           # bruine ou pluie verglacante
+            verglas = True
+        elif (51 <= code <= 65 or 80 <= code <= 82) and i < len(temps) \
+                and temps[i] is not None and temps[i] <= 0.5 \
+                and i < len(pluie) and (pluie[i] or 0) > 0:
+            verglas = True
+
+    rafale_max = max(rafales) if rafales else 0
+    if rafale_max >= RAFALES_TEMPETE:
+        return "tempete"
+    if any(code in (95, 96, 99) for code in codes):
+        return "orages"
+    if verglas:
+        return "verglas"
+    if rafale_max >= RAFALES_VENT:
+        return "vent"
+    if any(code in (73, 75, 86) for code in codes):   # neige moderee ou forte
+        return "neige"
+    return None
+
+
+def interroger(latitude, longitude):
+    r = requests.get(URL, timeout=20, params={
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "temperature_2m,weather_code,is_day",
+        "hourly": "weather_code,temperature_2m,precipitation,wind_gusts_10m",
+        "forecast_hours": 24,
+        "timezone": "Europe/Paris",
+        "wind_speed_unit": "kmh",
+    })
+    r.raise_for_status()
+    donnees = r.json()
+    actuel = donnees["current"]
+    return {
+        "temperature": actuel["temperature_2m"],
+        "icone": icone(actuel["weather_code"], actuel.get("is_day", 1) == 1),
+        "alerte": alerte(donnees.get("hourly", {})),
+        "maj": int(time.time()),
+    }
+
+
+def ecrire(meteo):
+    # Ecriture dans un fichier temporaire puis renommage : node.lua ne lit
+    # jamais un fichier a moitie ecrit
+    with open("meteo.json.tmp", "w") as f:
+        json.dump(meteo, f)
+    os.rename("meteo.json.tmp", "meteo.json")
+
+
+def main():
+    while True:
+        config = lire_config()
+        try:
+            meteo = interroger(config.get("latitude") or LATITUDE,
+                               config.get("longitude") or LONGITUDE)
+            ecrire(meteo)
+            print("meteo: %s" % json.dumps(meteo))
+            time.sleep(PERIODE)
+        except Exception:
+            traceback.print_exc()
+            time.sleep(PERIODE_ERREUR)
+
+
+if __name__ == "__main__":
+    main()

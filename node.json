@@ -1,0 +1,76 @@
+{
+  "name": "Horloge météo claire Leclerc V1",
+  "permissions": {
+    "network": "Récupère la météo (température, temps et alertes) sur api.open-meteo.com"
+  },
+  "options": [
+    {
+      "title": "Horloge",
+      "type": "section"
+    },
+    {
+      "title": "Afficher la trotteuse (aiguille des secondes)",
+      "name": "trotteuse",
+      "type": "boolean",
+      "default": true
+    },
+    {
+      "title": "Afficher l'horloge digitale",
+      "name": "horloge_digitale",
+      "type": "boolean",
+      "default": true,
+      "info": "Heure en chiffres dans une pastille bleue, sous le centre du cadran"
+    },
+    {
+      "title": "Météo",
+      "type": "section",
+      "intro": "Tuile en haut à gauche, mise à jour toutes les 15 minutes depuis Open-Meteo. Par défaut : Sarrebourg."
+    },
+    {
+      "title": "Latitude",
+      "name": "latitude",
+      "type": "float",
+      "default": 48.7347,
+      "hint": "Sarrebourg : 48.7347"
+    },
+    {
+      "title": "Longitude",
+      "name": "longitude",
+      "type": "float",
+      "default": 7.0539,
+      "hint": "Sarrebourg : 7.0539"
+    },
+    {
+      "title": "Messages",
+      "type": "section",
+      "intro": "Grande tuile en bas à gauche. Chaque message s'affiche du jour de début au jour de fin inclus ; une date vide = pas de limite. Plusieurs messages actifs le même jour s'affichent à tour de rôle (8 secondes chacun)."
+    },
+    {
+      "title": "Messages",
+      "name": "messages",
+      "type": "list",
+      "itemname": "Message",
+      "items": [
+        {
+          "title": "Texte",
+          "name": "texte",
+          "type": "string",
+          "default": "",
+          "placeholder": "BONNE JOURNÉE"
+        },
+        {
+          "title": "Début d'affichage",
+          "name": "debut",
+          "type": "date",
+          "allow_empty": true
+        },
+        {
+          "title": "Fin d'affichage",
+          "name": "fin",
+          "type": "date",
+          "allow_empty": true
+        }
+      ]
+    }
+  ]
+}

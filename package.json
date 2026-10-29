@@ -1,0 +1,13 @@
+{
+  "name": "Horloge météo claire Leclerc V1",
+  "author": "gaetanchristophe-commits",
+  "desc": "Horloge à aiguilles sur fond bleu clair, avec date, météo et messages en tuiles, aux couleurs E.Leclerc",
+  "platforms": [
+    "pi/epoch-1",
+    "pi/epoch-2"
+  ],
+  "offline": {
+    "support": "yes",
+    "info": "L'horloge fonctionne sans Internet ; la météo nécessite une connexion"
+  }
+}
