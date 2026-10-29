@@ -214,11 +214,11 @@ local function logo_cadran(cx, cy, R)
   logo:draw(cx - lw / 2, y, cx + lw / 2, y + lh)
 end
 
--- Heure digitale : pastille bleue sous le centre du cadran
+-- Heure digitale : pastille orange (comme la lunette) sous le centre du cadran
 local function heure_digitale(cx, cy, R, d)
   local w, h = R * 0.55, R * 0.20
   local y = cy + R * 0.32
-  cartouche(cx - w / 2, y - h / 2, cx + w / 2, y + h / 2, BLEU, h * 0.20)
+  cartouche(cx - w / 2, y - h / 2, cx + w / 2, y + h / 2, ORANGE, h * 0.20)
   local texte = string.format("%02d:%02d", d.hour, d.min)
   centre(texte, cx, y, ajuste(texte, h * 0.85, w * 0.86), BLANC)
 end
@@ -250,14 +250,32 @@ end
 -- Tuile date (haut gauche) : jour, quantieme, mois, annee
 ------------------------------------------------------------------------
 
+-- Les 4 lignes forment un bloc centre verticalement : meme marge en haut et
+-- en bas. Les lettres visibles occupent environ 78 % de la taille du texte.
+local VISIBLE = 0.78
+
 local function tuile_date(x1, y1, x2, y2, d)
   tuile(x1, y1, x2, y2)
   local h, xc, larg = y2 - y1, (x1 + x2) / 2, (x2 - x1) * 0.88
-  local jour, mois, annee = JOURS[d.wday], MOIS[d.month], tostring(d.year)
-  centre(jour,            xc, y1 + h * 0.166, ajuste(jour,  h * 0.19, larg), BLANC)
-  centre(tostring(d.day), xc, y1 + h * 0.474, ajuste("00",  h * 0.38, larg), BLANC)
-  centre(mois,            xc, y1 + h * 0.762, ajuste(mois,  h * 0.135, larg), BLANC)
-  centre(annee,           xc, y1 + h * 0.923, ajuste(annee, h * 0.135, larg), BLANC)
+  local lignes = {
+    {JOURS[d.wday],    ajuste(JOURS[d.wday], h * 0.179, larg)},
+    {tostring(d.day),  ajuste("00",          h * 0.357, larg)},
+    {MOIS[d.month],    ajuste(MOIS[d.month], h * 0.127, larg)},
+    {tostring(d.year), ajuste("0000",        h * 0.127, larg)},
+  }
+  -- Mois et annee identiques : la plus petite des deux tailles
+  local petit = math.min(lignes[3][2], lignes[4][2])
+  lignes[3][2], lignes[4][2] = petit, petit
+  local ecarts = {h * 0.09, h * 0.09, h * 0.06}
+
+  local total = ecarts[1] + ecarts[2] + ecarts[3]
+  for _, l in ipairs(lignes) do total = total + l[2] * VISIBLE end
+  local y = y1 + (h - total) / 2
+  for i, l in ipairs(lignes) do
+    local v = l[2] * VISIBLE
+    centre(l[1], xc, y + v / 2, l[2], BLANC)
+    y = y + v + (ecarts[i] or 0)
+  end
 end
 
 ------------------------------------------------------------------------
